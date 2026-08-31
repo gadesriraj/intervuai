@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+
+/* IntervuAI Light Theme v2 */
+:root {
+  color-scheme: light;
+}
+html {
+  background: #f8fafc;
+}
+body {
+  background: #f8fafc;
+  color: #0f172a;
+}

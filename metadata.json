@@ -1,0 +1,6 @@
+{
+  "name": "IntervuAI - AI Interview Coach",
+  "description": "Master job interviews with realistic AI-powered mock interviews, adaptive question follow-ups, resume analysis, coding rounds, and comprehensive feedback.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
