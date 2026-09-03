@@ -105,52 +105,35 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* =====================================================
             BRAND
         ====================================================== */}
-        <button
-          id="brand-logo"
-          onClick={() =>
-            handleNavClick(
-              isAuthenticated ? "dashboard" : "landing"
-            )
-          }
-          className="
-            flex items-center gap-3
-            cursor-pointer
-            group
-            select-none
-            shrink-0
-          "
-          aria-label="IntervuAI home"
-        >
-          <img
-            src="/logo.jpeg"
-            alt="IntervuAI"
-            className="w-[150px] h-auto object-contain"
-          />
-
-          <div className="flex items-center">
-            <span
-              className="
-                text-[21px]
-                font-extrabold
-                tracking-[-0.04em]
-                text-slate-950
-              "
-            >
-              Intervu
-              <span
-                className="
-                  text-transparent
-                  bg-clip-text
-                  bg-gradient-to-r
-                  from-indigo-600
-                  to-violet-600
-                "
-              >
-                AI
-              </span>
-            </span>
-          </div>
-        </button>
+        {/* =====================================================
+    BRAND
+====================================================== */}
+<button
+  id="brand-logo"
+  onClick={() =>
+    handleNavClick(
+      isAuthenticated ? "dashboard" : "landing"
+    )
+  }
+  className="
+    flex items-center
+    cursor-pointer
+    select-none
+    shrink-0
+  "
+  aria-label="IntervuAI home"
+>
+  <img
+    src="/logo.jpeg"
+    alt="IntervuAI"
+    className="
+      w-[150px]
+      h-auto
+      object-contain
+      block
+  "
+  />
+</button>
 
         {/* =====================================================
             DESKTOP NAVIGATION
