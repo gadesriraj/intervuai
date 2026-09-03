@@ -508,150 +508,86 @@ export const AuthProvider: React.FC<{
    * UPDATE PROFILE
    * -------------------------------------------------------
    */
+  const updateProfile = async (
+  updated: Partial<UserProfile>
+): Promise<void> => {
+  if (!user) {
+    throw new Error("You must be logged in.");
+  }
 
-  const updateProfile = (
-    updated: Partial<UserProfile>
-  ) => {
-    setUser((previous) => {
-      if (!previous) {
-        return null;
-      }
-
-      const updatedUser: UserProfile = {
-        ...previous,
-        ...updated,
-      };
-
-      /*
-       * Save profile to Supabase.
-       */
-      void (async () => {
-        try {
-          const savedSession =
-            getSavedSession();
-
-          let accessToken:
-            | string
-            | null = null;
-
-          if (savedSession) {
-            try {
-              const session =
-                JSON.parse(
-                  savedSession
-                );
-
-              accessToken =
-                session?.access_token ||
-                null;
-            } catch {
-              accessToken = null;
-            }
-          }
-
-          const headers: Record<
-            string,
-            string
-          > = {
-            "Content-Type":
-              "application/json",
-          };
-
-          /*
-           * Send JWT to server.
-           */
-          if (accessToken) {
-            headers.Authorization =
-              `Bearer ${accessToken}`;
-          }
-
-          const response =
-            await fetch(
-              "/api/profile",
-              {
-                method: "PUT",
-
-                headers,
-
-                body: JSON.stringify({
-                  id: updatedUser.id,
-
-                  name:
-                    updatedUser.name,
-
-                  email:
-                    updatedUser.email,
-
-                  college:
-                    updatedUser.college,
-
-                  degree:
-                    updatedUser.degree,
-
-                  branch:
-                    updatedUser.branch,
-
-                  graduationYear:
-                    updatedUser.graduationYear,
-
-                  targetCompany:
-                    updatedUser.targetCompany,
-
-                  dreamJob:
-                    updatedUser.dreamJob,
-
-                  yearsExperience:
-                    updatedUser.yearsExperience,
-
-                  skills:
-                    updatedUser.skills,
-
-                  github:
-                    updatedUser.github,
-
-                  linkedin:
-                    updatedUser.linkedin,
-
-                  portfolio:
-                    updatedUser.portfolio,
-                }),
-              }
-            );
-
-          let data: any = null;
-
-          try {
-            data =
-              await response.json();
-          } catch {
-            data = null;
-          }
-
-          if (!response.ok) {
-            console.error(
-              "[Profile] Failed to save:",
-              data?.error ||
-                "Unknown error"
-            );
-
-            return;
-          }
-
-          console.log(
-            "[Profile] Saved successfully to Supabase"
-          );
-        } catch (error) {
-          console.error(
-            "[Profile] Save error:",
-            error
-          );
-        }
-      })();
-
-      return updatedUser;
-    });
+  const updatedUser: UserProfile = {
+    ...user,
+    ...updated,
   };
 
+  try {
+    const savedSession = getSavedSession();
+
+    let accessToken: string | null = null;
+
+    if (savedSession) {
+      try {
+        const session = JSON.parse(savedSession);
+        accessToken = session?.access_token || null;
+      } catch {
+        accessToken = null;
+      }
+    }
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    if (accessToken) {
+      headers.Authorization = `Bearer ${accessToken}`;
+    }
+
+    const response = await fetch("/api/profile", {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        college: updatedUser.college,
+        degree: updatedUser.degree,
+        branch: updatedUser.branch,
+        graduationYear: updatedUser.graduationYear,
+        targetCompany: updatedUser.targetCompany,
+        dreamJob: updatedUser.dreamJob,
+        yearsExperience: updatedUser.yearsExperience,
+        skills: updatedUser.skills,
+        github: updatedUser.github,
+        linkedin: updatedUser.linkedin,
+        portfolio: updatedUser.portfolio,
+      }),
+    });
+
+    const data = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      console.error(
+        "[Profile] Failed to save:",
+        data?.error || "Unknown error"
+      );
+
+      throw new Error(
+        data?.error || "Failed to save profile."
+      );
+    }
+
+    // Update React state only after successful database save
+    setUser(updatedUser);
+
+    console.log(
+      "[Profile] Saved successfully to Supabase:",
+      data?.profile
+    );
+  } catch (error) {
+    console.error("[Profile] Save error:", error);
+    throw error;
+  }
+};
   /*
    * -------------------------------------------------------
    * EVALUATION HISTORY
