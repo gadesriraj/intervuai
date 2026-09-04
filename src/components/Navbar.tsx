@@ -102,9 +102,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           gap-6
         "
       >
-        {/* =====================================================
-            BRAND
-        ====================================================== */}
+
         {/* =====================================================
     BRAND
 ====================================================== */}
@@ -121,17 +119,12 @@ export const Navbar: React.FC<NavbarProps> = ({
     select-none
     shrink-0
   "
-  aria-label="IntervuAI home"
+  aria-label=" home"
 >
   <img
-    src="/logo.jpeg"
+    src="logo.jpeg"
     alt="IntervuAI"
-    className="
-      w-[150px]
-      h-auto
-      object-contain
-      block
-  "
+    className="w-[150px] h-auto object-contain block"
   />
 </button>
 
