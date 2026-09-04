@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { NavView } from "../types";
 import { useAuth } from "../context/AuthContext";
-
+import logo from "../asset/logo.jpeg";
 import {
   LayoutDashboard,
   FileText,
@@ -103,7 +103,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         "
       >
 
-        {/* =====================================================
+  {/* =====================================================
     BRAND
 ====================================================== */}
 <button
@@ -119,10 +119,10 @@ export const Navbar: React.FC<NavbarProps> = ({
     select-none
     shrink-0
   "
-  aria-label=" home"
+  aria-label="IntervuAI home"
 >
   <img
-    src="logo.jpeg"
+    src={logo}
     alt="IntervuAI"
     className="w-[150px] h-auto object-contain block"
   />
