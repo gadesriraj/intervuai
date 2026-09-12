@@ -273,6 +273,8 @@ app.get('/api/db/status', async (_req, res) => {
       supabaseAnonKey
     );
 
+
+
     const { error } = await supabase
       .from('profiles')
       .select('id')
@@ -357,18 +359,7 @@ console.log('[AUTH] session exists:', !!data.session);
     }
 
     // Store profile
-  const { data: profileData, error: profileError } = await supabase
-  .from('profiles')
-  .upsert({
-    id: data.user.id,
-    full_name: name || email.split('@')[0],
-    email: email.trim(),
-    target_role: targetRole || null,
-    experience_level: experienceLevel || null,
-    skills: Array.isArray(skills) ? skills : []
-  })
-  .select()
-  .single();
+  
 
 console.log('[PROFILE] error:', profileError);
 console.log('[PROFILE] data:', profileData);  
@@ -432,7 +423,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     // Get profile
-    const { data: profile } = await supabase
+    const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('*')
       .eq('id', data.user.id)
@@ -554,8 +545,42 @@ app.get('/api/auth/me', async (req, res) => {
 // -------------------------------------------------------------
 app.put('/api/profile', async (req, res) => {
   try {
+    const authorization =
+      req.headers.authorization || '';
+
+    if (!authorization.startsWith('Bearer ')) {
+      return res.status(401).json({
+        error: 'Authorization token is missing',
+      });
+    }
+
+    const token =
+      authorization.substring(7).trim();
+
+    if (!token) {
+      return res.status(401).json({
+        error: 'Authorization token is missing',
+      });
+    }
+
+    // Verify the logged-in user
     const {
-      id,
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser(token);
+
+    if (authError || !user) {
+      console.error(
+        '[PROFILE] Authentication failed:',
+        authError?.message
+      );
+
+      return res.status(401).json({
+        error: 'Invalid or expired session',
+      });
+    }
+
+    const {
       name,
       email,
       college,
@@ -571,45 +596,75 @@ app.put('/api/profile', async (req, res) => {
       portfolio,
     } = req.body;
 
-    if (!id) {
-      return res.status(400).json({
-        error: 'User ID is required',
-      });
-    }
-
     const profileData = {
-      id,
+      id: user.id,
 
-      full_name: name || null,
-      email: email || null,
+      full_name:
+        name?.trim() || null,
 
-      college: college || null,
-      degree: degree || null,
-      branch: branch || null,
+      email:
+        email?.trim() || user.email || null,
+
+      college:
+        college?.trim() || null,
+
+      degree:
+        degree?.trim() || null,
+
+      branch:
+        branch?.trim() || null,
 
       graduation_year:
-        graduationYear || null,
+        graduationYear?.trim() || null,
 
       target_company:
-        targetCompany || null,
+        targetCompany?.trim() || null,
 
       dream_job:
-        dreamJob || null,
+        dreamJob?.trim() || null,
 
       years_experience:
-        yearsExperience || null,
+        yearsExperience?.trim() || null,
 
       skills:
         Array.isArray(skills) ? skills : [],
 
-      github: github || null,
-      linkedin: linkedin || null,
-      portfolio: portfolio || null,
+      github:
+        github?.trim() || null,
 
-      updated_at: new Date().toISOString(),
+      linkedin:
+        linkedin?.trim() || null,
+
+      portfolio:
+        portfolio?.trim() || null,
+
+      updated_at:
+        new Date().toISOString(),
     };
 
-    const { data: profile, error } = await supabase
+    // Create a Supabase client authenticated
+    // as the current user.
+    const userSupabase = createClient(
+      (process.env.SUPABASE_URL || '').trim(),
+      (process.env.SUPABASE_ANON_KEY || '').trim(),
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      }
+    );
+
+    const supabaseAdmin = createClient(
+  (process.env.SUPABASE_URL || '').trim(),
+  (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim()
+);
+
+    const {
+      data: profile,
+      error: profileError,
+    } = await supabaseAdmin
       .from('profiles')
       .upsert(profileData, {
         onConflict: 'id',
@@ -617,21 +672,21 @@ app.put('/api/profile', async (req, res) => {
       .select()
       .single();
 
-    if (error) {
+    if (profileError) {
       console.error(
         '[Supabase] Profile upsert error:',
-        error
+        profileError
       );
 
       return res.status(500).json({
-        error: error.message,
-        details: error.details,
-        hint: error.hint,
+        error: profileError.message,
+        details: profileError.details,
+        hint: profileError.hint,
       });
     }
 
     console.log(
-      '[Supabase] Profile saved:',
+      '[Supabase] Profile saved successfully:',
       profile
     );
 
