@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { NavView } from '../types';
 import {
@@ -13,7 +13,6 @@ import {
   Save,
   CheckCircle2,
   Sparkles,
-  Upload,
   Plus,
   X
 } from 'lucide-react';
@@ -31,15 +30,17 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ setCurrentView }) => {
   const [degree, setDegree] = useState(user?.degree || '');
   const [branch, setBranch] = useState(user?.branch || '');
   const [graduationYear, setGraduationYear] = useState(user?.graduationYear || '');
-  const [targetCompany, setTargetCompany] = useState(user?.targetCompany || 'Google');
-  const [dreamJob, setDreamJob] = useState(user?.dreamJob || 'Software Engineer');
-  const [yearsExperience, setYearsExperience] = useState(user?.yearsExperience || '1-2 Years');
+  const [targetCompany, setTargetCompany] = useState(user?.targetCompany || '');
+  const [dreamJob, setDreamJob] = useState(user?.dreamJob || '');
+  const [yearsExperience, setYearsExperience] = useState(user?.yearsExperience || '');
   const [github, setGithub] = useState(user?.github || '');
   const [linkedin, setLinkedin] = useState(user?.linkedin || '');
   const [portfolio, setPortfolio] = useState(user?.portfolio || '');
   const [skills, setSkills] = useState<string[]>(user?.skills || []);
   const [newSkill, setNewSkill] = useState('');
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [profileComplete, setProfileComplete] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   const handleAddSkill = () => {
     if (newSkill.trim() && !skills.includes(newSkill.trim())) {
@@ -52,9 +53,38 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ setCurrentView }) => {
     setSkills(skills.filter(s => s !== skillToRemove));
   };
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    updateProfile({
+  const handleSave = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  setSaveError('');
+  setSavedSuccess(false);
+
+  const missingFields: string[] = [];
+
+  if (!name.trim()) missingFields.push('Full Name');
+  if (!college.trim()) missingFields.push('College / University');
+  if (!degree.trim()) missingFields.push('Degree & Major');
+  if (!branch.trim()) missingFields.push('Branch / Specialization');
+  if (!graduationYear.trim()) missingFields.push('Graduation Year');
+  if (!targetCompany.trim()) missingFields.push('Target Company');
+  if (!dreamJob.trim()) missingFields.push('Dream Role');
+
+
+  if (skills.length === 0) {
+    missingFields.push('At least one skill');
+  }
+
+  if (missingFields.length > 0) {
+    setSaveError(
+      `Please complete: ${missingFields.join(', ')}`
+    );
+    return;
+  }
+
+  
+
+  try {
+    await updateProfile({
       name,
       college,
       degree,
@@ -68,11 +98,52 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ setCurrentView }) => {
       portfolio,
       skills
     });
+
+    setProfileComplete(true);
     setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 3000);
-  };
+
+    setTimeout(() => {
+      setSavedSuccess(false);
+      setCurrentView('dashboard');
+    }, 1000);
+
+  } catch (error: any) {
+    console.error('[Profile] Save failed:', error);
+
+    setSaveError(
+      error?.message ||
+      'Unable to save your profile. Please try again.'
+    );
+  }
+};
+
+useEffect(() => {
+  const complete =
+    Boolean(name.trim()) &&
+    Boolean(college.trim()) &&
+    Boolean(degree.trim()) &&
+    Boolean(branch.trim()) &&
+    Boolean(graduationYear.trim()) &&
+    Boolean(targetCompany.trim()) &&
+    Boolean(dreamJob.trim()) &&
+    skills.length > 0;
+
+  setProfileComplete(complete);
+}, [
+  name,
+  college,
+  degree,
+  branch,
+  graduationYear,
+  targetCompany,
+  dreamJob,
+  skills,
+]);
+
+
 
   return (
+
     <div className="max-w-4xl mx-auto space-y-8 pb-12">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -92,6 +163,29 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ setCurrentView }) => {
           <Sparkles className="w-4 h-4" /> Analyze Resume with AI
         </button>
       </div>
+
+      {!profileComplete && (
+  <div className="p-4 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-2xl text-xs flex items-center gap-3">
+    <Sparkles className="w-4 h-4 shrink-0" />
+
+    <div>
+      <p className="font-bold">
+        Complete your profile
+      </p>
+
+      <p className="mt-0.5 text-indigo-600">
+        Add your career and education details so IntervuAI
+        can personalize your interviews and AI feedback.
+      </p>
+    </div>
+  </div>
+)}
+
+{saveError && (
+  <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl text-xs">
+    {saveError}
+  </div>
+)}
 
       {savedSuccess && (
         <div className="p-4 bg-emerald-50  border border-emerald-200  text-emerald-700  rounded-2xl text-xs flex items-center gap-2 animate-in fade-in">
@@ -148,7 +242,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ setCurrentView }) => {
                 type="text"
                 value={college}
                 onChange={e => setCollege(e.target.value)}
-                placeholder="e.g. Stanford University"
+                placeholder=""
                 className="w-full px-3.5 py-2 bg-slate-50  border border-slate-200  rounded-xl text-sm text-slate-900  focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
@@ -161,7 +255,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ setCurrentView }) => {
                 type="text"
                 value={degree}
                 onChange={e => setDegree(e.target.value)}
-                placeholder="e.g. B.S. Computer Science"
+                placeholder=""
                 className="w-full px-3.5 py-2 bg-slate-50  border border-slate-200  rounded-xl text-sm text-slate-900  focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
@@ -174,7 +268,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ setCurrentView }) => {
                 type="text"
                 value={branch}
                 onChange={e => setBranch(e.target.value)}
-                placeholder="e.g. Artificial Intelligence & Systems"
+                placeholder=""
                 className="w-full px-3.5 py-2 bg-slate-50  border border-slate-200  rounded-xl text-sm text-slate-900  focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
@@ -187,7 +281,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ setCurrentView }) => {
                 type="text"
                 value={graduationYear}
                 onChange={e => setGraduationYear(e.target.value)}
-                placeholder="e.g. 2025"
+                placeholder=""
                 className="w-full px-3.5 py-2 bg-slate-50  border border-slate-200  rounded-xl text-sm text-slate-900  focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
@@ -209,7 +303,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ setCurrentView }) => {
                 value={targetCompany}
                 onChange={e => setTargetCompany(e.target.value)}
                 className="w-full px-3.5 py-2 bg-slate-50  border border-slate-200  rounded-xl text-sm text-slate-900  focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
+              > 
+                <option value="">Select target company</option>
                 <option value="Google">Google</option>
                 <option value="Amazon">Amazon</option>
                 <option value="Microsoft">Microsoft</option>
@@ -231,7 +326,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ setCurrentView }) => {
                 value={dreamJob}
                 onChange={e => setDreamJob(e.target.value)}
                 className="w-full px-3.5 py-2 bg-slate-50  border border-slate-200  rounded-xl text-sm text-slate-900  focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
+              > 
+                <option value="">Select dream role</option>
                 <option value="Software Engineer">Software Engineer</option>
                 <option value="Data Analyst">Data Analyst</option>
                 <option value="AI Engineer">AI Engineer</option>
@@ -252,7 +348,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ setCurrentView }) => {
                 value={yearsExperience}
                 onChange={e => setYearsExperience(e.target.value)}
                 className="w-full px-3.5 py-2 bg-slate-50  border border-slate-200  rounded-xl text-sm text-slate-900  focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
+              > 
+                <option value="">Select experience (optional)</option>
                 <option value="Fresher / College Graduate">Fresher / College Student</option>
                 <option value="1-2 Years">1-2 Years</option>
                 <option value="3-5 Years">3-5 Years</option>
@@ -325,7 +422,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ setCurrentView }) => {
                 type="url"
                 value={github}
                 onChange={e => setGithub(e.target.value)}
-                placeholder="https://github.com/username"
+                placeholder=""
                 className="w-full px-3.5 py-2 bg-slate-50  border border-slate-200  rounded-xl text-sm text-slate-900  focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
@@ -338,7 +435,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ setCurrentView }) => {
                 type="url"
                 value={linkedin}
                 onChange={e => setLinkedin(e.target.value)}
-                placeholder="https://linkedin.com/in/username"
+                placeholder=""
                 className="w-full px-3.5 py-2 bg-slate-50  border border-slate-200  rounded-xl text-sm text-slate-900  focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
@@ -351,12 +448,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ setCurrentView }) => {
                 type="url"
                 value={portfolio}
                 onChange={e => setPortfolio(e.target.value)}
-                placeholder="https://yourname.dev"
+                placeholder=""
                 className="w-full px-3.5 py-2 bg-slate-50  border border-slate-200  rounded-xl text-sm text-slate-900  focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
           </div>
         </div>
+
+
+
 
         {/* Form Submit */}
         <div className="flex justify-end">
@@ -364,10 +464,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ setCurrentView }) => {
             type="submit"
             className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/25 transition-all text-sm flex items-center gap-2"
           >
-            <Save className="w-4 h-4" /> Save Profile Preferences
+           <Save className="w-4 h-4" />
+{profileComplete
+  ? 'Save Profile Preferences'
+  : 'Save & Continue to Dashboard'} 
           </button>
         </div>
       </form>
     </div>
   );
 };
+

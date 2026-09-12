@@ -5,16 +5,19 @@ import React, {
   useState,
 } from "react";
 
+import { createClient } from '@supabase/supabase-js';
+
 import {
   UserProfile,
   EvaluationReport,
   InterviewConfig,
 } from "../types";
 
-import {
-  INITIAL_USER,
-  RECENT_EVALUATION_SAMPLE,
-} from "../data/mockData";
+
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+);
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -36,12 +39,12 @@ interface AuthContextType {
 
   updateProfile: (
     updated: Partial<UserProfile>
-  ) => void;
+  ) => Promise<void>;
 
   evaluationHistory: EvaluationReport[];
   addEvaluationReport: (
     report: EvaluationReport
-  ) => void;
+  ) => Promise<void>;
 
   currentConfig: InterviewConfig | null;
   setCurrentConfig: (
@@ -61,6 +64,41 @@ const EVALUATION_STORAGE_KEY =
   "intervuai_eval_history";
 const THEME_STORAGE_KEY = "intervuai_theme";
 
+const mapProfileToUser = (
+  authUser: any,
+  profile: any
+): UserProfile => ({
+  id: authUser?.id || "",
+  email: authUser?.email || "",
+
+  name:
+    profile?.full_name ||
+    authUser?.user_metadata?.full_name ||
+    authUser?.email?.split("@")[0] ||
+    "User",
+
+  college: profile?.college || "",
+  degree: profile?.degree || "",
+  branch: profile?.branch || "",
+  graduationYear: profile?.graduation_year || "",
+
+  targetCompany: profile?.target_company || "",
+  dreamJob: profile?.dream_job || "",
+  yearsExperience: profile?.years_experience || "",
+
+  skills: Array.isArray(profile?.skills)
+    ? profile.skills
+    : [],
+
+  github: profile?.github || "",
+  linkedin: profile?.linkedin || "",
+  portfolio: profile?.portfolio || "",
+
+  resumeText: profile?.resume_text || "",
+  resumeScore: Number(profile?.resume_score || 0),
+  resumeFileName: profile?.resume_file_name || "",
+});
+
 /*
  * ---------------------------------------------------------
  * AUTH PROVIDER
@@ -70,6 +108,12 @@ const THEME_STORAGE_KEY = "intervuai_theme";
 export const AuthProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
+
+  
+
+
+  
+
   /*
    * -------------------------------------------------------
    * USER
@@ -89,22 +133,54 @@ export const AuthProvider: React.FC<{
    */
 
   const [evaluationHistory, setEvaluationHistory] =
-    useState<EvaluationReport[]>(() => {
-      try {
-        const saved = localStorage.getItem(
-          EVALUATION_STORAGE_KEY
-        );
+  useState<EvaluationReport[]>([]); 
+useEffect(() => {
+  if (!user?.id) {
+    setEvaluationHistory([]);
+    return;
+  }
 
-        if (saved) {
-          return JSON.parse(saved);
-        }
+  let cancelled = false;
 
-        return [RECENT_EVALUATION_SAMPLE];
-      } catch {
-        return [RECENT_EVALUATION_SAMPLE];
-      }
-    });
+  const loadEvaluations = async () => {
+    const { data, error } = await supabase
+      .from('interview_evaluations')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', {
+        ascending: false,
+      });
 
+    if (error) {
+      console.error(
+        'Failed to load interview evaluations:',
+        error
+      );
+      return;
+    }
+
+    if (!cancelled) {
+      setEvaluationHistory(
+        (data || []).map((item: any) => ({
+          ...item.evaluation,
+          id: item.id,
+          overallScore: Number(
+            item.overall_score || 0
+          ),
+          config: item.config,
+          answers: item.answers,
+          createdAt: item.created_at,
+        }))
+      );
+    }
+  };
+
+  loadEvaluations();
+
+  return () => {
+    cancelled = true;
+  };
+}, [user?.id]);
   /*
    * -------------------------------------------------------
    * INTERVIEW CONFIG
@@ -177,72 +253,130 @@ export const AuthProvider: React.FC<{
    */
 
   useEffect(() => {
-  try {
-    const savedSession =
-      localStorage.getItem("supabase_session");
+  const restoreSession = async () => {
+    try {
+      const savedSession =
+        localStorage.getItem(SUPABASE_SESSION_KEY);
 
-    if (!savedSession) {
-      setUser(null);
-      setAuthLoading(false);
-      return;
-    }
+      if (!savedSession) {
+        setUser(null);
+        setAuthLoading(false);
+        return;
+      }
 
-    const session = JSON.parse(savedSession);
+      const session = JSON.parse(savedSession);
 
-    if (!session?.access_token || !session?.user) {
-      localStorage.removeItem(
-        "supabase_session"
+      if (!session?.access_token) {
+        clearSession();
+        setUser(null);
+        setAuthLoading(false);
+        return;
+      }
+
+      const response = await fetch(
+        "/api/auth/me",
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }
       );
+
+      const data = await response.json().catch(
+        () => null
+      );
+
+      if (!response.ok || !data?.user) {
+        console.warn(
+          "[Auth] Session is invalid or expired."
+        );
+
+        clearSession();
+        setUser(null);
+        setAuthLoading(false);
+        return;
+      }
+
+      const profile = data.profile || {};
+
+      setUser({
+        id: data.user.id,
+        email:
+          data.user.email ||
+          session.user?.email ||
+          "",
+
+        name:
+          profile.full_name ||
+          data.user.name ||
+          data.user.email?.split("@")[0] ||
+          "User",
+
+        college: profile.college || "",
+        degree: profile.degree || "",
+        branch: profile.branch || "",
+
+        graduationYear:
+          profile.graduation_year || "",
+
+        targetCompany:
+          profile.target_company || "",
+
+        dreamJob:
+          profile.dream_job || "",
+
+        yearsExperience:
+          profile.years_experience || "",
+
+        skills:
+          Array.isArray(profile.skills)
+            ? profile.skills
+            : [],
+
+        github:
+          profile.github || "",
+
+        linkedin:
+          profile.linkedin || "",
+
+        portfolio:
+          profile.portfolio || "",
+
+        resumeText:
+          profile.resume_text || "",
+
+        resumeScore:
+          profile.resume_score || 0,
+
+        resumeFileName:
+          profile.resume_file_name || "",
+      });
+
+      setAuthLoading(false);
+
+    } catch (error) {
+      console.error(
+        "[Auth] Failed to restore session:",
+        error
+      );
+
+      clearSession();
       setUser(null);
       setAuthLoading(false);
-      return;
     }
+  };
 
-    const savedUser = session.user;
-
-    setUser({
-      ...INITIAL_USER,
-      id: savedUser.id,
-      name:
-        savedUser.name ||
-        savedUser.user_metadata?.full_name ||
-        savedUser.email?.split("@")[0] ||
-        "User",
-      email: savedUser.email || "",
-    });
-
-    setAuthLoading(false);
-  } catch (error) {
-    console.error(
-      "[Auth] Failed to restore session:",
-      error
-    );
-
-    setUser(null);
-    setAuthLoading(false);
-  }
+  restoreSession();
 }, []);
+
   /*
    * -------------------------------------------------------
    * SAVE EVALUATION HISTORY
    * -------------------------------------------------------
    */
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        EVALUATION_STORAGE_KEY,
-        JSON.stringify(
-          evaluationHistory
-        )
-      );
-    } catch (error) {
-      console.error(
-        "[Evaluation] Save failed:",
-        error
-      );
-    }
-  }, [evaluationHistory]);
+  
 
   /*
    * -------------------------------------------------------
@@ -356,19 +490,59 @@ export const AuthProvider: React.FC<{
     /*
      * Set application user.
      */
-    setUser({
-      ...INITIAL_USER,
+    const profile = data.profile || {};
 
-      id: data.user.id,
+setUser({
+  id: data.user.id,
 
-      name:
-        data.user.name ||
-        normalizedEmail.split("@")[0],
+  name:
+    profile.full_name ||
+    data.user.name ||
+    normalizedEmail.split("@")[0],
 
-      email:
-        data.user.email ||
-        normalizedEmail,
-    });
+  email:
+    data.user.email ||
+    normalizedEmail,
+
+  college: profile.college || "",
+  degree: profile.degree || "",
+  branch: profile.branch || "",
+
+  graduationYear:
+    profile.graduation_year || "",
+
+  targetCompany:
+    profile.target_company || "",
+
+  dreamJob:
+    profile.dream_job || "",
+
+  yearsExperience:
+    profile.years_experience || "",
+
+  skills:
+    Array.isArray(profile.skills)
+      ? profile.skills
+      : [],
+
+  github:
+    profile.github || "",
+
+  linkedin:
+    profile.linkedin || "",
+
+  portfolio:
+    profile.portfolio || "",
+
+  resumeText:
+    profile.resume_text || "",
+
+  resumeScore:
+    profile.resume_score || 0,
+
+  resumeFileName:
+    profile.resume_file_name || "",
+});
 
     return true;
   };
@@ -475,19 +649,59 @@ export const AuthProvider: React.FC<{
     /*
      * Set current user.
      */
-    setUser({
-      ...INITIAL_USER,
+    const profile = data.profile || {};
 
-      id: data.user.id,
+setUser({
+  id: data.user.id,
 
-      name:
-        data.user.name ||
-        cleanName,
+  name:
+    profile.full_name ||
+    data.user.name ||
+    cleanName,
 
-      email:
-        data.user.email ||
-        normalizedEmail,
-    });
+  email:
+    data.user.email ||
+    normalizedEmail,
+
+  college: profile.college || "",
+  degree: profile.degree || "",
+  branch: profile.branch || "",
+
+  graduationYear:
+    profile.graduation_year || "",
+
+  targetCompany:
+    profile.target_company || "",
+
+  dreamJob:
+    profile.dream_job || "",
+
+  yearsExperience:
+    profile.years_experience || "",
+
+  skills:
+    Array.isArray(profile.skills)
+      ? profile.skills
+      : [],
+
+  github:
+    profile.github || "",
+
+  linkedin:
+    profile.linkedin || "",
+
+  portfolio:
+    profile.portfolio || "",
+
+  resumeText:
+    profile.resume_text || "",
+
+  resumeScore:
+    profile.resume_score || 0,
+
+  resumeFileName:
+    profile.resume_file_name || "",
+});
 
     return true;
   };
@@ -594,16 +808,85 @@ export const AuthProvider: React.FC<{
    * -------------------------------------------------------
    */
 
-  const addEvaluationReport = (
-    report: EvaluationReport
-  ) => {
-    setEvaluationHistory(
-      (previous) => [
-        report,
-        ...previous,
-      ]
+  const addEvaluationReport = async (
+  report: EvaluationReport
+): Promise<void> => {
+  if (!user?.id) {
+    throw new Error(
+      "Cannot save evaluation: user is not authenticated."
     );
+  }
+
+  const savedSession = getSavedSession();
+
+  if (!savedSession) {
+    throw new Error(
+      "No active session found. Please log in again."
+    );
+  }
+
+  let accessToken: string | null = null;
+
+  try {
+    const session = JSON.parse(savedSession);
+    accessToken = session?.access_token || null;
+  } catch {
+    accessToken = null;
+  }
+
+  if (!accessToken) {
+    throw new Error(
+      "No valid access token found. Please log in again."
+    );
+  }
+
+  const userSupabase = createClient(
+    import.meta.env.VITE_SUPABASE_URL,
+    import.meta.env.VITE_SUPABASE_ANON_KEY,
+    {
+      global: {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      },
+    }
+  );
+
+  const { data, error } = await userSupabase
+    .from("interview_evaluations")
+  .insert({
+  user_id: user.id,
+  overall_score: Number(report.overallScore || 0),
+  config: report.config || null,
+  answers: report.transcript || null,
+  evaluation: report,
+})
+    .select()
+    .single();
+
+  if (error) {
+    console.error(
+      "Failed to save interview evaluation:",
+      error
+    );
+
+    throw new Error(
+      error.message ||
+        "Failed to save interview evaluation."
+    );
+  }
+
+  const savedReport: EvaluationReport = {
+    ...report,
+    id: data.id,
+    createdAt: data.created_at,
   };
+
+  setEvaluationHistory((previous) => [
+    savedReport,
+    ...previous,
+  ]);
+};
 
   /*
    * -------------------------------------------------------

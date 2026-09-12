@@ -8,7 +8,7 @@ dotenv.config({ override: true });
 
 const geminiApiKey = (process.env.GEMINI_API_KEY || '').trim();
 const groqApiKey = (process.env.GROQ_API_KEY || '').trim();
-const GROQ_MODEL = (process.env.GROQ_MODEL || 'llama-3.3-70b-versatile').trim();
+const GROQ_MODEL = (process.env.GROQ_MODEL || 'openai/gpt-oss-120b').trim();
 
 console.log('Gemini API key loaded:', !!geminiApiKey);
 console.log('Gemini API key length:', geminiApiKey.length);
@@ -55,11 +55,15 @@ const ai = new GoogleGenAI({
  * the normal interview flow.
  */
 async function generateJSONWithFallback(prompt: string): Promise<any> {
-  let geminiError: any = null;
 
-  // Primary: Gemini
+  // =========================================================
+  // PRIMARY: GEMINI
+  // =========================================================
+
   if (apiKey) {
     try {
+      console.log('[AI Router] Trying Gemini...');
+
       const response = await ai.models.generateContent({
         model: process.env.GEMINI_MODEL || 'gemini-3.6-flash',
         contents: prompt,
@@ -68,66 +72,142 @@ async function generateJSONWithFallback(prompt: string): Promise<any> {
         },
       });
 
-      const parsed = cleanAndParseJSON(response.text || '');
+      const parsed = cleanAndParseJSON(
+        response.text || ''
+      );
+
       if (!parsed) {
-        throw new Error('Gemini returned invalid JSON');
+        throw new Error(
+          'Gemini returned invalid JSON'
+        );
       }
 
-      console.log('[AI Router] SUCCESS provider=gemini');
+      console.log(
+        '[AI Router] SUCCESS provider=gemini'
+      );
+
       return parsed;
+
     } catch (error: any) {
-      geminiError = error;
+
       console.warn(
-        `[AI Router] Gemini failed: ${error?.status || error?.code || 'unknown'} ${error?.message || String(error)}`
+        `[AI Router] Gemini FAILED: ${
+          error?.status ||
+          error?.code ||
+          'unknown'
+        } ${
+          error?.message ||
+          String(error)
+        }`
       );
     }
+
   } else {
-    geminiError = new Error('Gemini API key is not configured');
-    console.warn('[AI Router] Gemini API key is not configured');
+
+    console.warn(
+      '[AI Router] Gemini skipped — API key is not configured'
+    );
   }
 
-  // Fallback: Groq
-  if (groqApiKey) {
-    try {
-      const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${groqApiKey}`,
-        },
-        body: JSON.stringify({
-          model: GROQ_MODEL,
-          messages: [{ role: 'user', content: prompt }],
-          response_format: { type: 'json_object' },
-        }),
-      });
 
-      const bodyText = await groqResponse.text();
+  // =========================================================
+  // FALLBACK: GROQ
+  // =========================================================
+
+  if (groqApiKey) {
+
+    try {
+
+      console.log(
+        '[AI Router] Trying Groq fallback...'
+      );
+
+      const groqResponse = await fetch(
+        'https://api.groq.com/openai/v1/chat/completions',
+        {
+          method: 'POST',
+
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${groqApiKey}`,
+          },
+
+          body: JSON.stringify({
+            model: GROQ_MODEL,
+
+            messages: [
+              {
+                role: 'user',
+                content: prompt,
+              },
+            ],
+
+            response_format: {
+              type: 'json_object',
+            },
+          }),
+        }
+      );
+
+      const bodyText =
+        await groqResponse.text();
 
       if (!groqResponse.ok) {
-        throw new Error(`Groq ${groqResponse.status}: ${bodyText}`);
+        throw new Error(
+          `Groq ${groqResponse.status}: ${bodyText}`
+        );
       }
 
-      const body = JSON.parse(bodyText);
-      const rawText = body?.choices?.[0]?.message?.content || '';
-      const parsed = cleanAndParseJSON(rawText);
+      const body =
+        JSON.parse(bodyText);
+
+      const rawText =
+        body?.choices?.[0]?.message?.content || '';
+
+      const parsed =
+        cleanAndParseJSON(rawText);
 
       if (!parsed) {
-        throw new Error('Groq returned invalid JSON');
+        throw new Error(
+          'Groq returned invalid JSON'
+        );
       }
 
-      console.log(`[AI Router] SUCCESS provider=groq model=${GROQ_MODEL}`);
+      console.log(
+        `[AI Router] SUCCESS provider=groq model=${GROQ_MODEL}`
+      );
+
       return parsed;
-    } catch (groqError: any) {
+
+    } catch (error: any) {
+
       console.error(
-        `[AI Router] Groq failed: ${groqError?.message || String(groqError)}`
+        `[AI Router] Groq FAILED: ${
+          error?.message ||
+          String(error)
+        }`
       );
     }
+
   } else {
-    console.error('[AI Router] Groq API key is not configured');
+
+    console.error(
+      '[AI Router] Groq skipped — API key is not configured'
+    );
   }
 
-  throw new Error('AI_CAPACITY_UNAVAILABLE');
+
+  // =========================================================
+  // BOTH FAILED
+  // =========================================================
+
+  console.error(
+    '[AI Router] ALL AI PROVIDERS FAILED'
+  );
+
+  throw new Error(
+    'AI_CAPACITY_UNAVAILABLE'
+  );
 }
 
 
@@ -1351,6 +1431,8 @@ if (parsed) {
     res.status(500).json({ error: 'Flashcard API error' });
   }
 });
+
+export { app };
 
 export default function handler(req: any, res: any) {
   return app(req, res);

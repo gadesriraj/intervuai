@@ -1,5 +1,4 @@
 import {
-  UserProfile,
   CodingQuestion,
   LeaderboardEntry,
   AchievementBadge,
@@ -8,41 +7,7 @@ import {
   EvaluationReport
 } from '../types';
 
-export const INITIAL_USER: UserProfile = {
-  id: 'usr_001',
-  name: 'Alex Mercer',
-  email: 'alex.mercer@stanford.edu',
-  college: 'Stanford University',
-  degree: 'B.S. Computer Science',
-  branch: 'Software Systems',
-  graduationYear: '2025',
-  skills: [
-    'Data Structures & Algorithms',
-    'React & TypeScript',
-    'Node.js & Express',
-    'Python & PyTorch',
-    'System Design',
-    'PostgreSQL'
-  ],
-  targetCompany: 'Google',
-  dreamJob: 'Senior Software Engineer',
-  yearsExperience: '1-2 Years',
-  github: 'https://github.com/alexmercer',
-  linkedin: 'https://linkedin.com/in/alexmercer',
-  portfolio: 'https://alexmercer.dev',
-  resumeFileName: 'Alex_Mercer_Software_Engineer_Resume.pdf',
-  resumeText: `Alex Mercer | Software Engineer | alex.mercer@stanford.edu | github.com/alexmercer
-Education: B.S. in Computer Science, Stanford University (GPA 3.9/4.0, Expected Grad: 2025)
-Skills: Python, C++, TypeScript, React, Express, PostgreSQL, Redis, Docker, System Design
-Experience:
-- Software Engineering Intern, Stripe (Summer 2024): Built real-time transaction monitoring pipeline processing 5M events/day with 99.99% uptime. Reduced API response P99 latency by 32% using Redis caching.
-- Technical Lead, Stanford WebDev Club: Led 12 developers building open-source campus navigation app used by 8,000+ students.
-Projects:
-- IntervuAI: AI-driven interview preparation engine powered by Gemini models and custom speech processing.
-- Distributed KV Store: Built RAFT consensus protocol in Go with 100% test coverage for leader election and log replication.`,
-  resumeScore: 88,
-  createdAt: '2026-01-15'
-};
+
 
 export const CODING_QUESTIONS: CodingQuestion[] = [
   {
@@ -54,17 +19,7 @@ export const CODING_QUESTIONS: CodingQuestion[] = [
 
 You may assume that each input would have exactly one solution, and you may not use the same element twice. You can return the answer in any order.`,
     starterCode: {
-      python: `def twoSum(nums: list[int], target: int) -> list[int]:
-    # Write your solution here
-    seen = {}
-    for i, num in enumerate(nums):
-        diff = target - num
-        if diff in seen:
-            return [seen[diff], i]
-        seen[num] = i
-    return []
-
-# Test execution
+python: `# Test execution
 print(twoSum([2, 7, 11, 15], 9))`,
       javascript: `function twoSum(nums, target) {
     const seen = new Map();
@@ -211,86 +166,3 @@ export const SAMPLE_FLASHCARDS: Flashcard[] = [
   }
 ];
 
-export const RECENT_EVALUATION_SAMPLE: EvaluationReport = {
-  id: 'eval_mock_101',
-  config: {
-    id: 'cfg_101',
-    roundType: 'Technical',
-    difficulty: 'Medium',
-    duration: 20,
-    company: 'Google',
-    role: 'Software Engineer',
-    useVoice: true,
-    useCamera: true,
-    focusAreas: ['System Design', 'React', 'Algorithms']
-  },
-  completedAt: '2026-08-05T14:30:00Z',
-  overallScore: 88,
-  metrics: {
-    technicalKnowledge: 86,
-    communication: 92,
-    confidence: 85,
-    grammar: 94,
-    vocabulary: 88,
-    problemSolving: 89,
-    logicalThinking: 90,
-    leadership: 82,
-    behavior: 87,
-    speakingSpeed: 84,
-    fillerWords: 91,
-    professionalism: 93
-  },
-  strengths: [
-    'Excellent clarity when explaining architectural choices in system design',
-    'Demonstrated strong knowledge of asynchronous React state patterns',
-    'Controlled tone and energetic presentation with low filler words'
-  ],
-  weaknesses: [
-    'Should go deeper into cache invalidation strategy edge cases',
-    'Slight rush when answering algorithmic time complexity questions'
-  ],
-  missedConcepts: [
-    'Write-through vs Write-back caching trade-offs under high concurrency',
-    'Consistent hashing virtual node distribution formula'
-  ],
-  questionReviews: [
-    {
-      question: 'How do you handle API state caching and cache invalidation in a large scale React app?',
-      candidateAnswer: 'I use React Query or Redux Toolkit Query to cache API responses by endpoint key, setting stale time and invalidating tags when mutations occur.',
-      idealAnswer: 'Explain key caching strategies (Stale-While-Revalidate, Normalized Caching), cache eviction policies (LRU), handling concurrent mutations with optimistic UI updates, and WebSocket real-time cache sync.',
-      score: 90,
-      feedback: 'Very practical answer. Mentioning optimistic updates and normalized entity caching would make it top-tier.'
-    },
-    {
-      question: 'Explain how you would design a URL shortener service like Bitly handling 1 billion links.',
-      candidateAnswer: 'I would use Base62 encoding on an auto-incrementing key or MD5 hash, store mapping in PostgreSQL with Redis cache for fast lookups.',
-      idealAnswer: 'Cover key generation service (KGS) to avoid collisions, database partitioning strategies (sharding by hash prefix), CDN edge caching, and analytics pipeline with Kafka.',
-      score: 86,
-      feedback: 'Good overview. Great mention of Base62 encoding. Could expand on DB sharding and KGS.'
-    }
-  ],
-  improvementPlan: [
-    { day: 'Day 1', task: 'Study Consistent Hashing and Database Sharding in depth' },
-    { day: 'Day 2', task: 'Practice 2 Medium System Design problems on Excalidraw' },
-    { day: 'Day 3', task: 'Review React Concurrent Rendering and Server Components' },
-    { day: 'Day 4', task: 'Record 3 video answers focusing on slow, deliberate pacing' },
-    { day: 'Day 5', task: 'Conduct a 30-min mock behavioral interview using STAR method' },
-    { day: 'Day 6', task: 'Solve 2 LeetCode Medium coding challenges on Arrays & DP' },
-    { day: 'Day 7', task: 'Complete IntervuAI full Google Technical Mock Round' }
-  ],
-  summary: 'Great mock performance! You demonstrated strong technical proficiency and polished communication suitable for a Senior Engineer loop at Google.',
-  transcript: [
-    {
-      questionId: 'q1',
-      question: 'How do you handle API state caching and cache invalidation in a large scale React app?',
-      answer: 'I use React Query or Redux Toolkit Query to cache API responses by endpoint key, setting stale time and invalidating tags when mutations occur.',
-      timestamp: '02:15'
-    },
-    {
-      questionId: 'q2',
-      question: 'Explain how you would design a URL shortener service like Bitly handling 1 billion links.',
-      answer: 'I would use Base62 encoding on an auto-incrementing key or MD5 hash, store mapping in PostgreSQL with Redis cache for fast lookups.',
-      timestamp: '07:40'
-    }
-  ]
-};

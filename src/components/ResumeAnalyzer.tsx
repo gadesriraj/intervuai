@@ -81,7 +81,7 @@ const handleAnalyze = async () => {
     alert(
       err instanceof Error
         ? err.message
-        : 'Resume analysis failed. Please check your Gemini API configuration.'
+        : 'Resume analysis failed. Please try again in a few minutes.'
     );
   } finally {
     setLoading(false);
@@ -261,7 +261,7 @@ const handleFileUpload = async (
             <FileText className="w-6 h-6 text-blue-500" /> AI Resume Readiness & Skill Extractor
           </h1>
           <p className="text-xs text-slate-500  mt-1">
-            Gemini AI parses your resume text, identifies high-impact keywords, scores your readiness, and customizes mock interview questions.
+             IntervuAI parses your resume text, identifies high-impact keywords, scores your readiness, and customizes mock interview questions.
           </p>
         </div>
 
@@ -305,7 +305,7 @@ const handleFileUpload = async (
             >
               {loading ? (
                 <>
-                  <RefreshCw className="w-4 h-4 animate-spin" /> Analyzing Resume with Gemini AI...
+                  <RefreshCw className="w-4 h-4 animate-spin" /> Analyzing Resume with IntervuAI...
                 </>
               ) : (
                 <>
