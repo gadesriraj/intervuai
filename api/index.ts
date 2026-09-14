@@ -423,7 +423,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     // Get profile
-    const { data: profile } = await supabaseAdmin
+    const { data: profile } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', data.user.id)
@@ -656,15 +656,12 @@ app.put('/api/profile', async (req, res) => {
       }
     );
 
-    const supabaseAdmin = createClient(
-  (process.env.SUPABASE_URL || '').trim(),
-  (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim()
-);
+  
 
     const {
       data: profile,
       error: profileError,
-    } = await supabaseAdmin
+    } = await userSupabase
       .from('profiles')
       .upsert(profileData, {
         onConflict: 'id',
